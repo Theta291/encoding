@@ -56,15 +56,16 @@ def toDigit(num):
 	else:
 		raise ValueError('Cannot convert to bases greater than 36')
 
-def toBaseStr(num, base, minLen=0, startBase=10):
-	retList = []
-	if startBase != 10:
-		num = str(num)
+def fromDigit(num):
 	try:
-		if int(num) == 0:
-			return ''.join(['0' for i in range(minLen)])
+		return int(num)
 	except ValueError:
-		pass
+		return ord(num) - 87
+
+def toBaseStr(num, base, minLen=0):
+	retList = []
+	if num == 0:
+		return ''.join(['0' for i in range(minLen)])
 	rem = num
 	numDigs = int(math.log(rem, base)) + 1
 	currDigs = numDigs
@@ -78,3 +79,11 @@ def toBaseStr(num, base, minLen=0, startBase=10):
 	if numDigs < minLen:
 		retList = ['0' for i in range(numDigs, minLen)] + retList
 	return ''.join(retList)
+
+def numStrToInt(numStr, base):
+	currNum = 0
+	for c in numStr:
+		currNum *= base
+		currNum += fromDigit(c)
+
+	return currNum

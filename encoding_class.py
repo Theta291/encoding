@@ -64,20 +64,24 @@ class encoder:
 			elif self.outputType == bool:
 				if units == 'bits':
 					size = lambda x : len(self.encodeDict[x])
+					encodedSize = sum([len(self.encodeDict[c]) for c in unCoded])
+					totalBytes = len(self.encode(unCoded))
+					padding = totalBytes * 8 - encodedSize
+					coeff = 1 - (padding / encodedSize)
 		except AttributeError as err:
 			raise err
 		countDict = countChars(unCoded)
 		total = sumDictVals(countDict)
-		return -sum(map(lambda item : item[1] * toLog(item[1] / total) / size(item[0]), countDict.items())) / total
+		return -coeff * sum(map(lambda item : item[1] * toLog(item[1] / total) / size(item[0]), countDict.items())) / total
 
 BIN_TO_HEX_DICT = {toBaseStr(i, 2, minLen=4): hex(i)[2:] for i in range(16)}
 BIN_STR_TO_BYTES = encoder(encodeDict=BIN_TO_HEX_DICT, outputType=bool)
 HEX_TO_BIN_DICT = {v: k for k, v in BIN_TO_HEX_DICT.items()}
 
-def binStrToBytesEncode(bitStr):
+def binStrToBytesEncode(bitStr, padByte='00000000'):
 	rem = len(bitStr) % 8
 	if rem > 0:
-		bitStr = ''.join(list(bitStr) + ['0' for i in range(rem, 8)])
+		bitStr = ''.join(list(bitStr) + [padByte[i] for i in range(rem, 8)])
 	hexStr = ''.join([BIN_TO_HEX_DICT[bitStr[i:i+4]] for i in range(0, len(bitStr), 4)])
 	retBytes =  bytes.fromhex(hexStr)
 	return retBytes
@@ -109,9 +113,9 @@ def createTernEncoder1(aString):
 				numVals -= 1
 
 	countDict = countChars(aString)
-	charsByProb = sorted(countDict.keys(), key=countDict.get, reverse=True)
-	charsByProb.extend([char for char in ALL_ASCII if char not in charsByProb])
-	decodeDict = dict(zip(encodeValsGen(len(charsByProb)), charsByProb))
+	charsByProbRev = sorted(countDict.keys(), key=countDict.get, reverse=True)
+	charsByProbRev.extend([char for char in ALL_ASCII if char not in charsByProbRev])
+	decodeDict = dict(zip(encodeValsGen(len(charsByProbRev)), charsByProbRev))
 	encodeDict = {v: k + '11' for k, v in decodeDict.items()}
 
 	def decodeFunc(someBytes):
@@ -130,3 +134,83 @@ def createTernEncoder1(aString):
 	retEncoder.decode = decodeFunc
 
 	return retEncoder
+
+def createHuffTree(aDict):
+	dictList = sorted(aDict.items(), key=lambda x:x[1])
+	huffTree = [(key, val, None, None) for key, val in dictList]
+	i = 0
+	while i+1 < len(huffTree):
+		lowest = huffTree[i]
+		low = huffTree[i+1]
+		totalFreq = lowest[1] + low[1]
+
+		newNode = (lowest[0] + low[0], totalFreq, i, i+1)
+		i += 2
+		j = i
+		while j < len(huffTree) and huffTree[j][1] <= totalFreq:
+			j += 1
+		huffTree.insert(j, newNode)
+
+	return huffTree
+
+def huffDictRecurse(huffTree, huffDict, currNode, currStr):
+	key = currNode[0]
+	if len(key) == 1:
+		huffDict[key] = currStr
+	else:
+		huffDictRecurse(huffTree, huffDict, huffTree[currNode[2]], currStr + '0')
+		huffDictRecurse(huffTree, huffDict, huffTree[currNode[3]], currStr + '1')
+
+def createHuffEncoder(aString):
+	countDict = countChars(aString)
+	countDict.update({c: 0 for c in ALL_ASCII if c not in countDict})
+	huffTree = createHuffTree(countDict)
+	root = huffTree[len(huffTree) - 1]
+
+	currNode = root
+	huffDict = {}
+	huffDictRecurse(huffTree, huffDict, currNode, '')
+
+	def decodeFunc(someBytes):
+		bitStr = BIN_STR_TO_BYTES.decode(someBytes)
+
+		paddingStr = bitStr[:3]
+		padding = numStrToInt(paddingStr, 2)
+
+		i = 3
+		currList = []
+		currNode = root
+		while i < len(bitStr) - padding:
+			key = currNode[0]
+			if len(key) == 1:
+				currList.append(key)
+				currNode = root
+			if bitStr[i] == '0':
+				currNode = huffTree[currNode[2]]
+			elif bitStr[i] == '1':
+				currNode = huffTree[currNode[3]]
+			else:
+				raise ValueError
+			i += 1
+
+		return ''.join(currList)
+
+	def encodeFunc(uncoded):
+		currList = []
+		for c in uncoded:
+			currList.append(huffDict[c])
+		currStr = ''.join(currList)
+		rem = (len(currStr) + 3) % 8
+		if rem > 0:
+			padding = 8 - rem
+		else:
+			padding = 0
+		paddingStr = toBaseStr(8 - rem, 2, minLen=3)
+		encodedStr = paddingStr + currStr
+		return BIN_STR_TO_BYTES.encode(encodedStr)
+
+	huffEncoder = encoder(encodeDict=huffDict, outputType=bool)
+	huffEncoder.encode = encodeFunc
+	huffEncoder.decode = decodeFunc
+
+	return huffEncoder

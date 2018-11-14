@@ -9,34 +9,60 @@ while True:
 		break
 	nameWOExt, fileExt = filename.split('.')
 	print("File size:\t", getFileSize(filename) * 8, "bits")
-	encodeName = nameWOExt + '_tern1.bin'
+	
+	encodeNameTern = nameWOExt + '_tern1.bin'
+	encodeNameHuff = nameWOExt + '_huff.bin'
+	
 	file = open(filename, 'r')
 	fileString = file.read()
 	file.close()
 	fileString = fileString[:-1]
 	countDict = countChars(fileString)
 	fileEntropy = getEntropy(countDict)
-	print("Avg info density:\t", fileEntropy / 8)
+	print("Avg info density (original):\t", fileEntropy / 8)
 
 	if first:
-		testEncoder = createTernEncoder1(fileString)
+		testTernEncoder = createTernEncoder1(fileString)
+		testHuffEncoder = createHuffEncoder(fileString)
 		first = False
 	
-	newFile = open(encodeName, 'wb+')
-	newFile.write(testEncoder.encode(fileString))
+	newFile = open(encodeNameTern, 'wb+')
+	newFile.write(testTernEncoder.encode(fileString))
 	newFile.close()
 	del newFile
 
-	newFile = open(encodeName, 'rb')
-	encodedBytes = newFile.read()
+	newFile = open(encodeNameHuff, 'wb+')
+	newFile.write(testHuffEncoder.encode(fileString))
 	newFile.close()
-	print("File size:\t", getFileSize(encodeName) * 8, "bits")
-	binStr = BIN_STR_TO_BYTES.decode(encodedBytes)
-	encodedEntPerBit = testEncoder.getWeightedEntropy(fileString)
-	print("Avg info density:\t", encodedEntPerBit)
+	del newFile
 
-	testName = nameWOExt + '_2.' + fileExt
-	newnewFile = open(testName, 'w+')
-	newnewFile.write(testEncoder.decode(encodedBytes))
+	newFile = open(encodeNameTern, 'rb')
+	encodedBytes1 = newFile.read()
+	newFile.close()
+	del newFile
+
+	print("File size:\t", getFileSize(encodeNameTern) * 8, "bits")
+	encodedEntPerBitTern = testTernEncoder.getWeightedEntropy(fileString)
+	print("Avg info density (tern 1):\t", encodedEntPerBitTern)
+
+	testNameTern = nameWOExt + '_tern1_decoded.' + fileExt
+	newnewFile = open(testNameTern, 'w+')
+	newnewFile.write(testTernEncoder.decode(encodedBytes1))
 	newnewFile.write('\n')
 	newnewFile.close()
+	del newnewFile
+
+	newFile = open(encodeNameHuff, 'rb')
+	encodedBytes2 = newFile.read()
+	newFile.close()
+
+	print("File size:\t", getFileSize(encodeNameHuff) * 8, "bits")
+	encodedEntPerBitHuff = testHuffEncoder.getWeightedEntropy(fileString)
+	print("Avg info density (huff):\t", encodedEntPerBitHuff)
+
+	testNameHuff = nameWOExt + '_huff_decoded.' + fileExt
+	newnewFile = open(testNameHuff, 'w+')
+	newnewFile.write(testHuffEncoder.decode(encodedBytes2))
+	newnewFile.write('\n')
+	newnewFile.close()
+	
