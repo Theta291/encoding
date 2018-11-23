@@ -1,3 +1,4 @@
+name: huff-coding
 channels:
   - defaults
 dependencies:
@@ -77,5 +78,4 @@ dependencies:
   - xz=5.2.4=h14c3975_4
   - zeromq=4.2.5=hf484d3e_1
   - zlib=1.2.11=h7b6447c_3
-prefix: /home/sagar/.conda/envs/encoding
 
