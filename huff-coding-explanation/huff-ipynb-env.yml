@@ -1,4 +1,3 @@
-name: encoding
 channels:
   - defaults
 dependencies:
