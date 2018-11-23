@@ -1,6 +1,6 @@
 filename = input('File name: ')
 file = open(filename, 'r')
-fileString = file.read()
+fileString = file.read(encoding='utf-8')
 file.close()
 
 def check_val_ascii(val):
