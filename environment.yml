@@ -2,4 +2,4 @@ name: huff-coding
 channels:
   - defaults
 dependencies:
-  - graphviz=2
+  - python-graphviz
